@@ -1,0 +1,134 @@
+#define AIN1 5
+#define AIN2 4
+#define BIN1 8
+#define BIN2 7
+#define ENA 3
+#define ENB 9
+#define STBY 6
+#define kp 23
+#define kd 111
+#define kr 0
+#define vi 80
+#define limit 80
+#define button 12
+bool turnLeft = false;
+bool turnRight = false;
+int s[8], mins[8], maxs[8];
+float num, den, erro, media, PIDsignal, lasterro;
+void setup() {
+  pinMode(AIN1,OUTPUT);
+  pinMode(AIN2,OUTPUT);
+  pinMode(BIN1,OUTPUT);
+  pinMode(BIN2,OUTPUT);
+  pinMode(ENA,OUTPUT);
+  pinMode(ENB,OUTPUT);
+  pinMode(button, INPUT_PULLUP);
+  digitalWrite(STBY, HIGH);
+  for (int i = 0; i < 8; i++)
+  {
+    s[i] = 0;
+    mins[i] = 1023;;
+    maxs[i] = 0;
+  }
+  Serial.begin(9600);
+ while(digitalRead(button)){
+for(int i =0;i<8;i++)
+    {
+
+    mins[i] = min(mins[i], analogRead(A0 + i));
+    maxs[i] = max(maxs[i], analogRead(A0 + i));
+    Serial.print(map(analogRead(A0 + i), mins[i], maxs[i], 0, 100));
+    Serial.print("\t");
+    }
+    Serial.println();
+}
+  Serial.end();
+}
+void loop() {
+  num = 0;
+  den = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    s[i] = map(analogRead(A0 + i), mins[i], maxs[i], 0, 100);
+    mins[i] = min(mins[i], analogRead(A0 + i));
+    maxs[i] = max(maxs[i], analogRead(A0 + i));
+  }
+  for (int i = 0; i < 8; i++) {
+    num += s[i] * i;
+    den += s[i];
+  }
+  if (den != 0)  media = (float)num / (float)den;
+  if (den == 0) media = 3.50;
+  erro = media - 3.50;
+  PIDsignal = erro * kp + (erro - lasterro) * kd;
+  /*
+  if((s[0]>=80)&&(s[2]>=80)&&(s[3]>=80)&&(s[4]>=80)&&(s[7]<=50)&&(s[6]<=50))
+  {
+    setMotor(120,120, true);
+    delay(100);
+    while(s[3] <= 75)
+    {
+      setMotor(120,-120,false);
+       s[4] = map(analogRead(A3), mins[4], maxs[4], 0, 100);
+    }
+    delay(100);
+    }
+  if((s[7]>=80)&&(s[6]>=80)&&(s[5]>=80)&&(s[4]>=80)&&(s[0]<=50)&&(s[1]<=50))
+  {
+    setMotor(120,120,true);
+    while(s[3] <= 75)
+    {
+      setMotor(-120,120,false);
+             s[3] = map(analogRead(A2), mins[3], maxs[3], 0, 100);
+    }
+    delay(100);  
+    }
+  */
+  setMotor(vi - PIDsignal - kr * erro, vi + PIDsignal - kr * erro, false);
+  lasterro = erro;
+
+}
+
+
+
+
+void setMotor(int v1, int v2, bool brake)
+{
+  if (brake == false)
+  {
+    if (v1 >= 0)
+    {
+      digitalWrite(AIN1, HIGH);
+      digitalWrite(AIN2, LOW);
+      analogWrite(ENA, abs(v1));
+    }
+    if (v1 < 0)
+    {
+      digitalWrite(AIN1, LOW);
+      digitalWrite(AIN2, HIGH);
+      analogWrite(ENA, abs(v1));
+    }
+
+    if (v2 >= 0)
+    {
+      digitalWrite(BIN1, HIGH);
+      digitalWrite(BIN2, LOW);
+      analogWrite(ENB, abs(v2));
+    }
+    if (v2 < 0)
+    {
+      digitalWrite(BIN1, LOW);
+      digitalWrite(BIN2, HIGH);
+      analogWrite(ENB, abs(v2));
+    }
+  }
+  if (brake == true)
+  {
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, HIGH);
+    analogWrite(ENB, abs(v1));
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, HIGH);
+    analogWrite(ENB, abs(v2));
+  }
+}
